@@ -4983,6 +4983,7 @@ class EncoderRNN(nn.Module):
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size, n_layers, batch_first=True)
         self.dropout = nn.Dropout(dropout_p)
+        self.act = get_activation('tanh')
 
     def __repr__(self) -> str:
         """Returns a string representing the configuration of the layer.
@@ -5017,7 +5018,7 @@ class EncoderRNN(nn.Module):
         """
         embedded = self.dropout(self.embedding(input))
         output, hidden = self.gru(embedded)
-        return output, hidden[-1]
+        return output, self.act(hidden[-1])
 
 
 class DecoderRNN(nn.Module):
@@ -5055,7 +5056,7 @@ class DecoderRNN(nn.Module):
                  n_layers: int,
                  max_length: int,
                  batch_size: int,
-                 step_activation: str = "relu",
+                 step_activation: str = "tanh",
                  **kwargs):
         """Initialize the DecoderRNN layer.
         
@@ -5069,7 +5070,7 @@ class DecoderRNN(nn.Module):
             Maximum length of the sequence.
         batch_size: int
             Batch size of the input.
-        step_activation: str (default "relu")
+        step_activation: str (default "tanh")
             Activation function to use after every step.
 
         """
