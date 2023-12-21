@@ -17,7 +17,23 @@ class BaseSystem(EditableModule):
 
     Examples
     --------
-    
+    >>> from deepchem.utils.dft_utils import BaseSystem
+    >>> from deepchem.utils.dft_utils import BaseHamilton
+    >>> from deepchem.utils.dft_utils import BaseGrid
+    >>> class MySystem(BaseSystem):
+    ...     def __init__(self):
+    ...         self.hamiltonian = BaseHamilton()
+    ...         self.grid = BaseGrid()
+    ...     def get_hamiltonian(self):
+    ...         return self.hamiltonian
+    ...     def get_grid(self):
+    ...         return self.grid
+    ...     def requires_grid(self):
+    ...         return True
+    >>> system = MySystem()
+    >>> system.requires_grid()
+    True
+
     """
 
     @abstractmethod
