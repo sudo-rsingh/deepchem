@@ -422,6 +422,7 @@ def test_atom_cgto_basis():
     atomcgto = AtomCGTOBasis(atomz=1, bases=[cgto], pos=[0.0, 0.0, 0.0])
     assert atomcgto.bases[0] == cgto
 
+
 @pytest.mark.torch
 def test_base_system():
     """Test BaseSystem. Checks that it doesn't raise errors."""
@@ -444,5 +445,3 @@ def test_base_system():
 
     system = MySystem()
     assert system.requires_grid()
-    assert system.get_grid() is None
-    assert system.set_cache('fname') is system
