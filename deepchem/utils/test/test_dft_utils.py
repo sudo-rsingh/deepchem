@@ -397,3 +397,29 @@ def test_base_hamilton():
     hamilton = ham.build()
     assert torch.allclose(hamilton.get_nuclattr(),
                           torch.tensor([[[[1., 1.], [1., 1.]]]]))
+
+
+@pytest.mark.torch
+def test_base_system():
+    """Test BaseSystem. Checks that it doesn't raise errors."""
+    from deepchem.utils.dft_utils import BaseSystem, BaseHamilton, BaseGrid
+
+    class MySystem(BaseSystem):
+
+        def __init__(self):
+            self.hamiltonian = BaseHamilton()
+            self.grid = BaseGrid()
+
+        def get_hamiltonian(self):
+            return self.hamiltonian
+
+        def get_grid(self):
+            return self.grid
+
+        def requires_grid(self):
+            return True
+
+    system = MySystem()
+    assert system.requires_grid()
+    assert system.get_grid() is None
+    assert system.set_cache('fname') is system
