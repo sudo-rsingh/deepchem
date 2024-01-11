@@ -445,3 +445,19 @@ def test_base_system():
 
     system = MySystem()
     assert system.requires_grid()
+
+
+@pytest.mark.torch
+def test_np2ctypes():
+    """Checks that it doesn't raise errors."""
+    from deepchem.utils.dft_utils.hamilton.intor.utils import np2ctypes
+    a = np.array([1, 2, 3])
+    np2ctypes(a)
+
+
+@pytest.mark.torch
+def test_int2ctypes():
+    from deepchem.utils.dft_utils.hamilton.intor.utils import int2ctypes
+    a = 1
+    c_type = int2ctypes(a)
+    assert c_type.value == 1

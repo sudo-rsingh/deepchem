@@ -394,6 +394,18 @@ The utilites here are used to create an object that contains information about a
 
 .. autofunction:: deepchem.utils.differentiation_utils.davidson
 
+Hamilton Utilities
+------------------
+
+Contains functions and constants that are used specifically for
+dft_utils.hamilton.intor files. CONSTANTS - CINT, CGTO, CPBC,
+CVHF, CSYMM. These acts as interface to the c function through a
+seperate library - `dqclibs`.
+
+.. autofunction:: deepchem.utils.dft_utils.hamilton.intor.utils.np2ctypes
+
+.. autofunction:: deepchem.utils.dft_utils.hamilton.intor.utils.int2ctypes
+
 Attribute Utilities
 -------------------
 
