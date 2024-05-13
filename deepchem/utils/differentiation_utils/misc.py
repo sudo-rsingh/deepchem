@@ -131,3 +131,8 @@ def assert_runtime(cond, msg=""):
     """
     if not cond:
         raise RuntimeError(msg)
+
+
+def assert_fcn_params(fcn, args):
+    if inspect.ismethod(fcn) and isinstance(fcn.__self__, EditableModule):
+        fcn.__self__.assertparams(fcn, *args)
