@@ -116,3 +116,27 @@ def test_get_np_dtype():
     """Test the get_np_dtype utility."""
     assert dc.utils.pytorch_utils.get_np_dtype(torch.float32) == np.float32
     assert dc.utils.pytorch_utils.get_np_dtype(torch.float64) == np.float64
+
+
+@pytest.mark.torch
+def test_tensor_packer():
+    from deepchem.utils.pytorch_utils import TensorPacker
+    tensors = [torch.randn(2, 3), torch.randn(4, 5)]
+    packer = TensorPacker(tensors)
+    packed = packer.flatten(tensors)
+    unpacked = packer.pack(packed)
+
+    assert torch.allclose(tensors[0], unpacked[0])
+
+
+@pytest.mark.torch
+def test_convert_none_grads_to_zeros():
+    from deepchem.utils import convert_none_grads_to_zeros
+    grads = (torch.randn(2, 3), None)
+    inputs = (torch.randn(2, 3), torch.randn(2, 3))
+    grads = convert_none_grads_to_zeros(grads, inputs)
+    assert torch.allclose(grads[1], torch.tensor([[0., 0., 0.], [0., 0., 0.]]))
+    grads = torch.randn(2, 3)
+    inputs = torch.randn(2, 3)
+    grads = convert_none_grads_to_zeros(grads, inputs)
+    assert grads.shape == torch.Size([2, 3])

@@ -1,16 +1,10 @@
 import torch
 import copy
 from typing import Callable, Union, Mapping, Any, Sequence, Dict
-from deepchem.utils.differentiation_utils import assert_runtime
-from xitorch._utils.assertfuncs import assert_fcn_params, assert_runtime
-from xitorch._core.pure_function import get_pure_function, make_sibling
+from deepchem.utils.differentiation_utils import assert_runtime, get_pure_function, make_sibling, set_default_option, get_method
+from deepchem.utils import TensorNonTensorSeparator, TensorPacker, convert_none_grads_to_zeros
 from xitorch._impls.integrate.ivp.explicit_rk import rk4_ivp, rk38_ivp, fwd_euler_ivp
 from xitorch._impls.integrate.ivp.adaptive_rk import rk23_adaptive, rk45_adaptive
-from xitorch._utils.misc import set_default_option, TensorNonTensorSeparator, \
-    TensorPacker, get_method
-from xitorch._utils.tensor import convert_none_grads_to_zeros
-from xitorch._docstr.api_docstr import get_methods_docstr
-from xitorch.debug.modes import is_debug_enabled
 
 
 def solve_ivp(fcn: Union[Callable[..., torch.Tensor], Callable[..., Sequence[torch.Tensor]]],
@@ -65,8 +59,6 @@ def solve_ivp(fcn: Union[Callable[..., torch.Tensor], Callable[..., Sequence[tor
         The values of ``y`` for each time step in ``ts``.
         It is a tensor with shape ``(nt,*ny)`` or a list of tensors
     """
-    if is_debug_enabled():
-        assert_fcn_params(fcn, (ts[0], y0, *params))
     assert_runtime(len(ts.shape) == 1, "Argument ts must be a 1D tensor")
 
     if method is None:  # set the default method
@@ -249,14 +241,3 @@ class _SolveIVP(torch.autograd.Function):
         grad_ntensor_params = [None for _ in range(len(allparams) - ntensor_params)]
         grad_params = param_sep.reconstruct_params(grad_tensor_params, grad_ntensor_params)
         return (None, grad_ts, None, None, None, grad_y0, *grad_params)
-
-
-# docstring completion
-ivp_methods: Dict[str, Callable] = {
-    "rk45": rk45_adaptive,
-    "rk23": rk23_adaptive,
-    "rk4": rk4_ivp,
-    "rk38": rk38_ivp,
-    "euler": fwd_euler_ivp,
-}
-solve_ivp.__doc__ = get_methods_docstr(solve_ivp, ivp_methods)

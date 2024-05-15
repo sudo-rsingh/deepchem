@@ -142,6 +142,8 @@ try:
     from deepchem.utils.pytorch_utils import tallqr
     from deepchem.utils.pytorch_utils import to_fortran_order
     from deepchem.utils.pytorch_utils import get_np_dtype
+    from deepchem.utils.pytorch_utils import TensorPacker
+    from deepchem.utils.pytorch_utils import convert_none_grads_to_zeros
 
     from deepchem.utils.safeops_utils import safepow
     from deepchem.utils.safeops_utils import safenorm

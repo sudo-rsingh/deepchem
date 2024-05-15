@@ -469,3 +469,113 @@ def get_np_dtype(dtype: torch.dtype) -> Any:
         return np.complex128
     else:
         raise TypeError("Unknown type: %s" % dtype)
+
+
+class TensorPacker(object):
+    """Utility class to pack and unpack a list of tensors into a single tensor.
+
+    Examples
+    --------
+    >>> import torch
+    >>> tensors = [torch.randn(2, 3), torch.randn(4, 5)]
+    >>> packer = TensorPacker(tensors)
+    >>> packed = packer.flatten(tensors)
+    >>> packed.shape
+    torch.Size([26])
+    >>> unpacked = packer.pack(packed)
+    >>> unpacked[0].shape
+    torch.Size([2, 3])
+    >>> unpacked[1].shape
+    torch.Size([4, 5])
+
+    """
+    def __init__(self, tensors):
+        """Initialize the TensorPacker.
+
+        Parameters
+        ----------
+        tensors: List[torch.Tensor]
+            List of tensors to be packed.
+
+        """
+        self.idx_shapes = []
+        istart = 0
+        for i, p in enumerate(tensors):
+            ifinish = istart + torch.numel(p)
+            self.idx_shapes.append((istart, ifinish, p.shape))
+            istart = ifinish
+
+    def flatten(self, y_list):
+        """Flatten a list of tensors into a single tensor.
+
+        Parameters
+        ----------
+        y_list: List[torch.Tensor]
+            List of tensors to be packed.
+
+        """
+        return torch.cat([y.reshape(-1) for y in y_list], dim=-1)
+
+    def pack(self, y):
+        """Unpack a single tensor into a list of tensors.
+
+        Parameters
+        ----------
+        y: torch.Tensor
+            Tensor to be unpacked.
+
+        Returns
+        -------
+        List[torch.Tensor]
+            List of tensors.
+
+        """
+        yshapem1 = y.shape[:-1]
+        return tuple(
+            y[..., istart:ifinish].reshape(yshapem1 + shape)
+            for (istart, ifinish, shape) in self.idx_shapes
+        )
+
+
+def convert_none_grads_to_zeros(grads, inputs):
+    """Converts None gradients to zeros.
+
+    Examples
+    --------
+    >>> import torch
+    >>> from deepchem.utils.pytorch_utils import convert_none_grads_to_zeros
+    >>> grads = (torch.randn(2, 3), None)
+    >>> inputs = (torch.randn(2, 3), torch.randn(2, 3))
+    >>> grads = convert_none_grads_to_zeros(grads, inputs)
+    >>> grads[1]
+    tensor([[0., 0., 0.],
+            [0., 0., 0.]])
+    >>> grads = torch.randn(2, 3)
+    >>> inputs = torch.randn(2, 3)
+    >>> grads = convert_none_grads_to_zeros(grads, inputs)
+    >>> grads.shape
+    torch.Size([2, 3])
+
+    Parameters
+    ----------
+    grads: Union[torch.Tensor, Tuple[torch.Tensor]]
+        Gradients to be converted.
+    inputs: Union[torch.Tensor, Tuple[torch.Tensor]]'
+        Inputs to be used for creating zero gradients.
+
+    Returns
+    -------
+    Union[torch.Tensor, Tuple[torch.Tensor]]
+        Converted gradients.
+
+    """
+    is_tuple = isinstance(grads, tuple)
+    if is_tuple:
+        grads = list(grads)
+    for i in range(len(grads)):
+        g = grads[i]
+        if g is None:
+            grads[i] = torch.zeros_like(inputs[i])
+    if is_tuple:
+        grads = tuple(grads)
+    return grads
