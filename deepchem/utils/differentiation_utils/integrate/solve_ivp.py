@@ -28,8 +28,8 @@ def solve_ivp(fcn: Union[Callable[..., torch.Tensor], Callable[..., Sequence[tor
     e.g. ``rk38``, ``rk4``, and ``euler``). Adaptive steps cannot be vmapped
     at the moment.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
     fcn: callable
         The function that represents dy/dt. The function takes an input of a
         single time ``t`` and tensor ``y`` with shape ``(*ny)`` and
@@ -86,9 +86,46 @@ def solve_ivp(fcn: Union[Callable[..., torch.Tensor], Callable[..., Sequence[tor
     else:
         return _SolveIVP.apply(pfcn, ts, fwd_options, bck_options, len(params), y0, *params, *pfcn.objparams())
 
+
 class _SolveIVP(torch.autograd.Function):
+    """Function to solve the initial value problem (IVP) or ordinary differential
+    equations (ODE) using the explicit Runge-Kutta methods."""
     @staticmethod
     def forward(ctx, pfcn, ts, fwd_options, bck_options, nparams, y0, *allparams):
+        """Forward pass of the solve_ivp method.
+
+        Parameters
+        ----------
+        pfcn: callable
+            The function that represents dy/dt. The function takes an input of a
+            single time ``t`` and tensor ``y`` with shape ``(*ny)`` and
+            produce :math:`\mathrm{d}\mathbf{y}/\mathrm{d}t` with shape ``(*ny)`.
+            The output of the function must be a tensor with shape ``(*ny)`` or
+            a list of tensors.
+        ts: torch.tensor
+            The time points where the value of `y` will be returned.
+            It must be monotonically increasing or decreasing.
+            It is a tensor with shape ``(nt,)``.
+        fwd_options: dict
+            Method-specific option (see method section below).
+        bck_options: dict
+            Options for the backward solve_ivp method. If not specified, it will
+            take the same options as fwd_options.
+        nparams: int
+            The number of parameters in the function.
+        y0: torch.tensor
+            The initial value of ``y``, i.e. ``y(t[0]) == y0``.
+            It is a tensor with shape ``(*ny)`` or a list of tensors.
+        *allparams
+            Sequence of other parameters required in the function.
+
+        Returns
+        -------
+        torch.tensor
+            The values of ``y`` for each time step in ``ts``.
+            It is a tensor with shape ``(nt,*ny)`` or a list of tensors
+
+        """
         config = fwd_options
         ctx.bck_config = set_default_option(config, bck_options)
 
@@ -119,6 +156,19 @@ class _SolveIVP(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_yt):
+        """Backward pass of the solve_ivp method.
+
+        Parameters
+        ----------
+        grad_yt: torch.tensor
+            The gradient of the output yt.
+
+        Returns
+        -------
+        torch.tensor
+            The gradient of the input ts.
+
+        """
         # grad_yt: (nt, *ny)
         nparams = ctx.nparams
         pfcn = ctx.pfcn
@@ -141,6 +191,29 @@ class _SolveIVP(torch.autograd.Function):
         # to connect the graph or not
 
         def pfunc2(t, y, tensor_params):
+            """Evaluate the function with the given tensor_params.
+
+            Parameters
+            ----------
+            t: torch.tensor
+                The time point.
+            y: torch.tensor
+                The value of y at time `t`.
+            tensor_params: list
+                List of tensor parameters.
+
+            Returns
+            -------
+            f: torch.tensor
+                The value of the function at time `t`.
+            tcopy: torch.tensor
+                The copy of the input time.
+            ycopy: torch.tensor
+                The copy of the input y.
+            tensor_params_copy: list
+                List of tensor parameters copy.
+
+            """
             if not grad_enabled:
                 # if graph is not constructed, then use the default tensor_params
                 ycopy = y.detach().requires_grad_()  # [yi.detach().requires_grad_() for yi in y]
@@ -171,6 +244,29 @@ class _SolveIVP(torch.autograd.Function):
         states = [None for _ in range(state_size)]
 
         def new_pfunc(t, states, *tensor_params):
+            """The new function for the augmented dynamics.
+
+            Parameters
+            ----------
+            t: torch.tensor
+                The time point.
+            states: list
+                List of augmented states.
+            tensor_params: list
+                List of tensor parameters.
+
+            Returns
+            -------
+            f: torch.tensor
+                The value of the function at time `t`.
+            dLdt: torch.tensor
+                The gradient of the time.
+            dLdy: torch.tensor
+                The gradient of the y.
+            dLdp: list
+                List of the gradient of the parameters.
+
+            """
             # t: single-element
             y = states[y_index]
             dLdy = -states[dLdy_index]
@@ -203,6 +299,23 @@ class _SolveIVP(torch.autograd.Function):
 
         @make_sibling(new_pfunc)
         def pfcn_back(t, ytensor, *params):
+            """The new function for the augmented dynamics.
+
+            Parameters
+            ----------
+            t: torch.tensor
+                The time point.
+            ytensor: torch.tensor
+                The value of y at time `t`.
+            params: list
+                List of parameters.
+
+            Returns
+            -------
+            res: torch.tensor
+                The value of the function at time `t`.
+
+            """
             ylist = bkw_roller.pack(ytensor)
             res_list = new_pfunc(t, ylist, *params)
             res = bkw_roller.flatten(res_list)
