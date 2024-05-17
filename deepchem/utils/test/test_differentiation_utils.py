@@ -1079,3 +1079,17 @@ def test_get_equilibrium_default_method():
 def test_get_minimizer_default_method():
     from deepchem.utils.differentiation_utils.optimize.rootfinder import _get_minimizer_default_method
     assert _get_minimizer_default_method(None) == 'broyden1'
+
+
+@pytest.mark.torch
+def test_solve_ivp():
+    from deepchem.utils.differentiation_utils import solve_ivp
+    from scipy.integrate import solve_ivp as scipy_solve_ivp
+    def dydt(t, y):
+        return t + y
+
+    y0 = torch.tensor([1.0, 10.0])
+    t_span = torch.tensor([0, 1.])
+    y = solve_ivp(dydt, t_span, y0)
+    y_scipy = scipy_solve_ivp(dydt, [0, 1], [1, 10], t_eval=[0, 1]).y
+    assert torch.allclose(y.T, torch.tensor(y_scipy, dtype=torch.float32), 0.0001)

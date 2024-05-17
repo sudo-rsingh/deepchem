@@ -23,6 +23,8 @@ try:
     from deepchem.utils.differentiation_utils.pure_function import get_pure_function
     from deepchem.utils.differentiation_utils.pure_function import make_sibling
 
+    from deepchem.utils.differentiation_utils.integrate.solve_ivp import solve_ivp
+
     from deepchem.utils.differentiation_utils.grad import jac
 
     from deepchem.utils.differentiation_utils.solve import wrap_gmres

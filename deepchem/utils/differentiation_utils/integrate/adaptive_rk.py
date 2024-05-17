@@ -5,7 +5,7 @@ from typing import Optional
 
 def rk_step(func, t, y, f, h, abck):
     """Perform a single step of the Runge-Kutta method.
-    
+
     Parameters
     ----------
     func: callable
@@ -233,7 +233,32 @@ class RKAdaptiveStepSolver(object):
         return rk_state, t1_achieved
 
 class RK23(RKAdaptiveStepSolver):
-    """Runge-Kutta method with order 2 and 3."""
+    """Runge-Kutta method with order 2 and 3.
+
+    Examples
+    --------
+    >>> import torch
+    >>> def fcn(t, y):
+    ...     return t + y
+    >>> ts = torch.linspace(0, 1, 11)
+    >>> y0 = torch.tensor([0.0])
+    >>> params = []
+    >>> solver = RK23(atol=1e-8, rtol=1e-5)
+    >>> solver.setup(fcn, ts, y0, params)
+    >>> solver.solve()
+    tensor([[0.0000],
+            [0.0052],
+            [0.0214],
+            [0.0499],
+            [0.0918],
+            [0.1487],
+            [0.2221],
+            [0.3138],
+            [0.4255],
+            [0.5596],
+            [0.7183]])
+
+    """
     error_estimator_order = 2
     n_stages = 3
     C = torch.tensor([0, 1 / 2, 3 / 4], dtype=torch.float64)
@@ -246,7 +271,31 @@ class RK23(RKAdaptiveStepSolver):
     E = torch.tensor([5 / 72, -1 / 12, -1 / 9, 1 / 8], dtype=torch.float64)
 
 class RK45(RKAdaptiveStepSolver):
-    """Runge-Kutta method with order 4 and 5."""
+    """Runge-Kutta method with order 4 and 5.
+    
+    Examples
+    --------
+    >>> import torch
+    >>> def fcn(t, y):
+    ...     return t + y
+    >>> ts = torch.linspace(0, 1, 11)
+    >>> y0 = torch.tensor([0.0])
+    >>> params = []
+    >>> solver = RK45(atol=1e-8, rtol=1e-5)
+    >>> solver.setup(fcn, ts, y0, params)
+    >>> solver.solve()
+    tensor([[0.0000],
+            [0.0052],
+            [0.0214],
+            [0.0499],
+            [0.0918],
+            [0.1487],
+            [0.2221],
+            [0.3138],
+            [0.4255],
+            [0.5596],
+            [0.7183]])
+    """
     error_estimator_order = 4
     n_stages = 6
     C = torch.tensor([0, 1 / 5, 3 / 10, 4 / 5, 8 / 9, 1], dtype=torch.float64)
@@ -264,6 +313,28 @@ class RK45(RKAdaptiveStepSolver):
 
 def _rk_adaptive(fcn, ts, y0, params, cls, atol=1e-8, rtol=1e-5, **unused):
     """Perform the adaptive Runge-Kutta steps.
+
+    Examples
+    --------
+    >>> import torch
+    >>> def fcn(t, y):
+    ...     return -y
+    >>> ts = torch.linspace(0, 1, 11)
+    >>> y0 = torch.tensor([1.0])
+    >>> params = []
+    >>> yt = _rk_adaptive(fcn, ts, y0, params, RK45)
+    >>> yt
+    tensor([[1.0000],
+            [0.9048],
+            [0.8187],
+            [0.7408],
+            [0.6703],
+            [0.6065],
+            [0.5488],
+            [0.4966],
+            [0.4493],
+            [0.4066],
+            [0.3679]])
 
     Parameters
     ----------
@@ -291,6 +362,28 @@ def _rk_adaptive(fcn, ts, y0, params, cls, atol=1e-8, rtol=1e-5, **unused):
 def rk23_adaptive(fcn, ts, y0, params, **kwargs):
     """
     Perform the adaptive Runge-Kutta steps with order 2 and 3.
+
+    Examples
+    --------
+    >>> import torch
+    >>> def fcn(t, y):
+    ...     return -y
+    >>> ts = torch.linspace(0, 1, 11)
+    >>> y0 = torch.tensor([1.0])
+    >>> params = []
+    >>> yt = rk45_adaptive(fcn, ts, y0, params)
+    >>> yt
+    tensor([[1.0000],
+            [0.9048],
+            [0.8187],
+            [0.7408],
+            [0.6703],
+            [0.6065],
+            [0.5488],
+            [0.4966],
+            [0.4493],
+            [0.4066],
+            [0.3679]])
     """
     return _rk_adaptive(fcn, ts, y0, params, RK23, **kwargs)
 
@@ -298,5 +391,28 @@ def rk23_adaptive(fcn, ts, y0, params, **kwargs):
 def rk45_adaptive(fcn, ts, y0, params, **kwargs):
     """
     Perform the adaptive Runge-Kutta steps with order 4 and 5.
+
+    Examples
+    --------
+    >>> import torch
+    >>> def fcn(t, y):
+    ...     return -y
+    >>> ts = torch.linspace(0, 1, 11)
+    >>> y0 = torch.tensor([1.0])
+    >>> params = []
+    >>> yt = rk45_adaptive(fcn, ts, y0, params)
+    >>> yt
+    tensor([[1.0000],
+            [0.9048],
+            [0.8187],
+            [0.7408],
+            [0.6703],
+            [0.6065],
+            [0.5488],
+            [0.4966],
+            [0.4493],
+            [0.4066],
+            [0.3679]])
+
     """
     return _rk_adaptive(fcn, ts, y0, params, RK45, **kwargs)
