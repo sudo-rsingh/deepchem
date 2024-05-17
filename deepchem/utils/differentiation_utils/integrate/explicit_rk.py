@@ -1,33 +1,26 @@
 from typing import List, Callable, Sequence, NamedTuple, Union
 import torch
 
-# All functions in this file should have the following inputs and outputs
-# Inputs
-# ------
-# * fcn: callable dy/dt = fcn(t, y, *params)
-#       The function to be integrated. It should produce output of list of
-#       tensors following the shapes of tuple `y`. `t` should be a single element.
-# * t: torch.Tensor (nt,)
-#       The integrated times
-# * y0: list of torch.Tensor (*ny)
-#       The list of initial values
-# * params: list
-#       List of any other parameters
-# * **kwargs: dict
-#       Any other keyword arguments
-# Outputs
-# -------
-# * yt: list of torch.Tensor (nt,*ny)
-#       The value of `y` at the given time `t`
-# Note
-# ----
-# The operations are done in grad-disabled environment and **not** expected to
-# be able to propagate gradients.
 
-__all__ = ["rk4_ivp", "rk38_ivp", "fwd_euler_ivp"]
-
-############################# list of tableaus #############################
+# list of tableaus
 class _Tableau(NamedTuple):
+    """To specify a particular method, one needs to provide the integer s
+    (the number of stages), and the coefficients a[i,j] (for 1 ≤ j < i ≤ s),
+    b[i] (for i = 1, 2, ..., s) and c[i] (for i = 2, 3, ..., s). The matrix
+    [aij] is called the Runge–Kutta matrix, while the b[i] and c[i] are known
+    as the weights and the nodes. These data are usually arranged in a
+    mnemonic device, known as a Butcher tableau (after John C. Butcher):
+
+    Attributes
+    ----------
+    c: List[float]
+        The nodes
+    b: List[float]
+        The weights
+    a: List[List[float]]
+        The Runge-Kutta matrix
+
+    """
     c: List[float]
     b: List[float]
     a: List[List[float]]
@@ -57,6 +50,33 @@ fwd_euler_tableau = _Tableau(
 def explicit_rk(tableau: _Tableau,
                 fcn: Callable[..., torch.Tensor], t: torch.Tensor, y0: torch.Tensor,
                 params: Sequence[torch.Tensor]):
+    """The family of explicit Runge–Kutta methods is a generalization
+    of the RK4 method mentioned above.
+
+    Parameters
+    ----------
+    fcn: callable dy/dt = fcn(t, y, *params)
+        The function to be integrated. It should produce output of list of
+        tensors following the shapes of tuple `y`. `t` should be a single element.
+    t: torch.Tensor (nt,)
+        The integrated times
+    y0: list of torch.Tensor (*ny)
+        The list of initial values
+    params: list
+        List of any other parameters
+    **kwargs: dict
+        Any other keyword arguments
+
+    Returns
+    -------
+    yt: list of torch.Tensor (nt,*ny)
+        The value of `y` at the given time `t`
+
+    References
+    ----------
+    [1].. https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#Explicit_Runge.E2.80.93Kutta_methods
+
+    """
     c = tableau.c
     a = tableau.a
     b = tableau.b
@@ -68,9 +88,6 @@ def explicit_rk(tableau: _Tableau,
     # set up the results list
     yt_lst: List[torch.Tensor] = []
     yt_lst.append(y0)
-    y = y0
-    # see https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods#Explicit_Runge.E2.80.93Kutta_methods
-    # for the implementation
     for i in range(nt - 1):
         t0 = t[i]
         t1 = t[i + 1]
@@ -93,18 +110,91 @@ def explicit_rk(tableau: _Tableau,
     yt = torch.stack(yt_lst, dim=0)
     return yt
 
-############################# list of methods #############################
+# list of methods
 def rk38_ivp(fcn: Callable[..., torch.Tensor], t: torch.Tensor, y0: torch.Tensor,
              params: Sequence[torch.Tensor], **kwargs):
+    """A slight variation of "the" Runge–Kutta method is also due to
+    Kutta in 1901 and is called the 3/8-rule.[19] The primary advantage
+    this method has is that almost all of the error coefficients are
+    smaller than in the popular method, but it requires slightly more
+    FLOPs (floating-point operations) per time step.
+    
+    Parameters
+    ----------
+    fcn: callable dy/dt = fcn(t, y, *params)
+        The function to be integrated. It should produce output of list of
+        tensors following the shapes of tuple `y`. `t` should be a single element.
+    t: torch.Tensor (nt,)
+        The integrated times
+    y0: list of torch.Tensor (*ny)
+        The list of initial values
+    params: list
+        List of any other parameters
+    **kwargs: dict
+        Any other keyword arguments
+
+    Returns
+    -------
+    yt: list of torch.Tensor (nt,*ny)
+        The value of `y` at the given time `t`
+
+    """
     return explicit_rk(rk38_tableau, fcn, t, y0, params)
 
 def fwd_euler_ivp(fcn: Callable[..., torch.Tensor], t: torch.Tensor, y0: torch.Tensor,
                   params: Sequence[torch.Tensor], **kwargs):
+    """However, the simplest Runge–Kutta method is the (forward) Euler method,
+    given by the formula $y_{n+1} = y_{n} + hf(t_{n}, y_{n}). This is the only
+    consistent explicit Runge–Kutta method with one stage.
+    
+    Parameters
+    ----------
+    fcn: callable dy/dt = fcn(t, y, *params)
+        The function to be integrated. It should produce output of list of
+        tensors following the shapes of tuple `y`. `t` should be a single element.
+    t: torch.Tensor (nt,)
+        The integrated times
+    y0: list of torch.Tensor (*ny)
+        The list of initial values
+    params: list
+        List of any other parameters
+    **kwargs: dict
+        Any other keyword arguments
+
+    Returns
+    -------
+    yt: list of torch.Tensor (nt,*ny)
+        The value of `y` at the given time `t`
+
+    """
     return explicit_rk(fwd_euler_tableau, fcn, t, y0, params)
 
 def rk4_ivp(fcn: Callable[..., torch.Tensor], t: torch.Tensor, y0: torch.Tensor,
             params: Sequence[torch.Tensor], **kwargs):
-    """
-    Perform the Runge-Kutta steps of order 4 with a fixed step size.
+    """The most commonly used Runge Kutta method to find the solution
+    of a differential equation is the RK4 method, i.e., the fourth-order
+    Runge-Kutta method. The Runge-Kutta method provides the approximate
+    value of y for a given point x. Only the first order ODEs can be
+    solved using the Runge Kutta RK4 method.
+
+    Parameters
+    ----------
+    fcn: callable dy/dt = fcn(t, y, *params)
+        The function to be integrated. It should produce output of list of
+        tensors following the shapes of tuple `y`. `t` should be a single element.
+    t: torch.Tensor (nt,)
+        The integrated times
+    y0: list of torch.Tensor (*ny)
+        The list of initial values
+    params: list
+        List of any other parameters
+    **kwargs: dict
+        Any other keyword arguments
+
+    Returns
+    -------
+    yt: list of torch.Tensor (nt,*ny)
+        The value of `y` at the given time `t`
+
     """
     return explicit_rk(rk4_tableau, fcn, t, y0, params)

@@ -3,8 +3,8 @@ import copy
 from typing import Callable, Union, Mapping, Any, Sequence, Dict
 from deepchem.utils.differentiation_utils import assert_runtime, get_pure_function, make_sibling, set_default_option, get_method
 from deepchem.utils import TensorNonTensorSeparator, TensorPacker, convert_none_grads_to_zeros
-from xitorch._impls.integrate.ivp.explicit_rk import rk4_ivp, rk38_ivp, fwd_euler_ivp
-from xitorch._impls.integrate.ivp.adaptive_rk import rk23_adaptive, rk45_adaptive
+from deepchem.utils.differentiation_utils.integrate.explicit_rk import rk4_ivp, rk38_ivp, fwd_euler_ivp
+from deepchem.utils.differentiation_utils.integrate.adaptive_rk import rk23_adaptive, rk45_adaptive
 
 
 def solve_ivp(fcn: Union[Callable[..., torch.Tensor], Callable[..., Sequence[torch.Tensor]]],
