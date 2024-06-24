@@ -36,7 +36,7 @@ class DFTXC(torch.nn.Module):
 
     """
 
-    def __init__(self, xcstr: str, nnmodel: torch.nn.Module):
+    def __init__(self, xcstr: str, nnmodel: torch.nn.Module, nn_weight: float = 0.0):
         """
         Parameters
         ----------
@@ -53,6 +53,7 @@ class DFTXC(torch.nn.Module):
         super(DFTXC, self).__init__()
         self.xcstr = xcstr
         self.nnmodel = nnmodel
+        self.nn_weight = nn_weight
 
     def forward(self, inputs):
         """
@@ -67,7 +68,7 @@ class DFTXC(torch.nn.Module):
             Calculated value of the data point after running the Kohn Sham iterations
             using the neural network XC functional.
         """
-        hybridxc = HybridXC(self.xcstr, self.nnmodel, aweight0=0.0)
+        hybridxc = HybridXC(self.xcstr, self.nnmodel, self.nn_weight, 1 - self.nn_weight)
         output = []
         for entry in inputs:
             evl = XCNNSCF(hybridxc, entry)
@@ -130,6 +131,7 @@ class XCModel(TorchModel):
     def __init__(self,
                  xcstr: str,
                  nnmodel: Optional[torch.nn.Module] = None,
+                 nn_weight: float = 0.0,
                  input_size: int = 2,
                  hidden_size: int = 10,
                  n_layers: int = 1,
@@ -159,7 +161,7 @@ class XCModel(TorchModel):
         if nnmodel is None:
             nnmodel = _construct_nn_model(input_size, hidden_size, n_layers,
                                           modeltype).to(torch.double)
-        model = (DFTXC(xcstr, nnmodel)).to(device)
+        model = (DFTXC(xcstr, nnmodel, nn_weight)).to(device)
         self.xc = xcstr
         loss: Loss = L2Loss()
         output_types = ['loss', 'predict']
@@ -253,7 +255,17 @@ def _construct_nn_model(input_size: int, hidden_size: int, n_layers: int,
     It is not necessary to use this method with the XCModel, user defined pytorch
     models will work.
     """
-    if modeltype == 1:
+    if modeltype == 0:
+        layers: List[Any]
+        layers = []
+        for i in range(n_layers):
+            n1 = input_size if i == 0 else hidden_size
+            layers.append(torch.nn.Linear(n1, hidden_size))
+            layers.append(torch.nn.Tanh())
+            layers.append(torch.nn.Softplus())
+        layers.append(torch.nn.Linear(hidden_size, 1, bias=False))
+        return torch.nn.Sequential(*layers)
+    elif modeltype == 1:
         layers: List[Any]
         layers = []
         for i in range(n_layers):

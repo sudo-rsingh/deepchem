@@ -60,7 +60,7 @@ class XCNNSCF(torch.nn.Module):
     exchange and correlation effects. Physical review, 140(4A), p.A1133.
     """
 
-    def __init__(self, xc: Union[BaseNNXC, HybridXC], entry: DFTEntry):
+    def __init__(self, xc: Union[BaseNNXC, HybridXC], entry: DFTEntry, max_iter: int = 50):
         super().__init__()
         """
         Parameters
@@ -71,6 +71,7 @@ class XCNNSCF(torch.nn.Module):
         entry: DFTEntry
         """
         self.xc = xc
+        self.max_iter = max_iter
 
     @abstractmethod
     def get_xc(self) -> HybridXC:
@@ -102,7 +103,7 @@ class XCNNSCF(torch.nn.Module):
         """
         dm0, dmname = self._get_dm0(system)
         mol = system.get_dqc_mol()
-        qc = KS(mol, xc=self.xc).run(dm0=dm0, bck_options={"max_niter": 50})
+        qc = KS(mol, xc=self.xc).run(dm0=dm0, bck_options={"max_niter": self.max_iter})
         return KSCalc(qc)
 
     def _dm0_name(self, obj) -> str:

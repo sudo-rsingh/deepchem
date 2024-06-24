@@ -1,10 +1,10 @@
 import torch.nn as nn
 import torch
 from pyscf import dft, gto
-from pyscf.dft import numint
 import numpy as np
 import attr
-from typing import Union, Optional, Sequence, Tuple
+from typing import Union, Optional, Sequence, Tuple, List
+from deepchem.models.torch_models import TorchModel
 
 class dm21(nn.Module):
     def __init__(self):
