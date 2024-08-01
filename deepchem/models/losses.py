@@ -1316,6 +1316,22 @@ class DensityProfileLoss(Loss):
         return loss
 
 
+class DM21Loss(Loss):
+    def _create_pytorch_loss(self):
+        import torch
+
+        def loss(output, labels):
+            output, labels = _make_pytorch_shapes_consistent(output, labels)
+
+            loss = E_r * [(output - labels)**2] + l * E_s *  
+
+            return torch.nn.functional.mse_loss(output,
+                                                labels,
+                                                reduction='none')
+
+        return loss
+
+
 class NTXentMultiplePositives(Loss):
     """
     This is a modification of the NTXent loss function from Chen [1]_. This loss is designed for contrastive learning of molecular representations, comparing the similarity of a molecule's latent representation to positive and negative samples.

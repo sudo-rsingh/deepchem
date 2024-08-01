@@ -1,6 +1,30 @@
+from typing import Optional, Sequence, Tuple, Union
+
+import numpy as np
 from deepchem.models.torch_models import Logistic
 import torch.nn as nn
 import torch
+from deepchem.utils.dft_utils import Mol
+from deepchem.models.torch_models import TorchModel
+
+
+
+
+
+class DM21Model(TorchModel):
+    """
+    
+    References
+    ----------
+    ..[1] Roothaan equations. (2022, July 15).
+    In Wikipedia. https://en.wikipedia.org/wiki/Roothaan_equations
+
+    ..[2] Orbital overlap. (2024, January 4).
+    In Wikipedia. https://en.wikipedia.org/wiki/Orbital_overlap#Overlap_matrix
+    """
+    def __init__(self, hidden_size: int = 256, n_layers: int = 6, **kwargs):
+        model = DM21(hidden_size=hidden_size, n_layers=n_layers)
+        super(DM21Model, self).__init__(model, L2Loss(), **kwargs)
 
 
 class DM21(nn.Module):
@@ -104,3 +128,55 @@ class DM21(nn.Module):
             x = self.lin_elu[2*i+1](x)
         x = self.acti_scaled_sigmoid(self.final(x))
         return x
+
+
+class DM21Features:
+    grid_coords: np.ndarray
+    grid_weights: np.ndarray
+    rho_a: np.ndarray
+    rho_b: np.ndarray
+    tau_a: np.ndarray
+    tau_b: np.ndarray
+    norm_grad_rho_a: np.ndarray
+    norm_grad_rho_b: np.ndarray
+    norm_grad_rho: np.ndarray
+    hfxa: np.ndarray
+    hfxb: np.ndarray
+
+
+def construct_function_inputs(
+    mol: Mol,
+    dms: Union[np.ndarray, Sequence[np.ndarray]],
+    spin: int,
+    coords: np.ndarray,
+    weights: np.ndarray,
+    rho: Union[np.ndarray, Tuple[np.ndarray, np.ndarray]],
+    ao: Optional[np.ndarray] = None
+):
+    if spin == 0:
+        # RKS
+        rhoa = rho / 2
+        rhob = rho / 2
+    else:
+        # UKS
+        rhoa, rhob = rho
+    
+    # Local HF features.
+    exxa, exxb = [], []
+    fxxa, fxxb = [], []
+    """
+    for omega in sorted(self._omega_values):
+      hfx_results = compute_hfx_density.get_hf_density(
+          mol,
+          dms,
+          coords=coords,
+          omega=omega,
+          deriv=1,
+          ao=ao)
+      exxa.append(hfx_results.exx[0])
+      exxb.append(hfx_results.exx[1])
+      fxxa.append(hfx_results.fxx[0])
+      fxxb.append(hfx_results.fxx[1])
+    exxa = np.stack(exxa, axis=-1)
+    fxxa = np.stack(fxxa, axis=-1)
+    """
