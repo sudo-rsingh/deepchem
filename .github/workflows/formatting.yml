@@ -65,9 +65,6 @@ jobs:
         cd ..
         cp requirements/env.yml env.yml
 
-    - name: Prune micromamba cache
-      run: micromamba clean --all --yes
-
     - name: Install all dependencies using micromamba
       uses: mamba-org/setup-micromamba@main
       with:
