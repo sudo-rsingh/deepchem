@@ -23,12 +23,11 @@ jobs:
         sudo rm -rf /opt/ghc
         sudo rm -rf "/usr/local/share/boost"
         sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/lib/android
         sudo docker image prune --all --force
         sudo rm -rf /opt/hostedtoolcache/CodeQL
+
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Set commit range (push to the master branch, e.g. merge)
       if: github.ref == 'refs/heads/master' && github.event_name == 'push'
