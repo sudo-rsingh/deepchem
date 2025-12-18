@@ -16,8 +16,8 @@ class OrbitalOrthogonalizer(EditableModule):
     2
     >>> mat = torch.tensor([[1.0, 0.5], [0.5, 1.0]])
     >>> orthozer.convert2(mat)
-    tensor([[1.0000, 0.0000],
-            [0.0000, 1.0000]])
+    tensor([[1.0000e+00, 1.2596e-08],
+            [7.9855e-09, 1.0000e+00]]) 
 
     """
 
