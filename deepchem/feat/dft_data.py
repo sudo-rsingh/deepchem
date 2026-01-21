@@ -62,6 +62,8 @@ class DFTSystem():
         self.grid = "sg3"
         self.lattsum_opt = None
 
+        if 'auxbasis' in system.keys():
+            self.auxbasis = system["auxbasis"]
         if 'spin' in system.keys():
             self.spin = int(system["spin"])
         if 'charge' in system.keys():
@@ -115,7 +117,7 @@ class DFTSystem():
                 lattsum_opt=self.lattsum_opt
             )
             # Density fitting is required for PBC calculations
-            system = system.densityfit()
+            system = system.densityfit(auxbasis=self.auxbasis)
         else:
             # Create a Mol (isolated molecule) system
             system = Mol(
