@@ -7,7 +7,8 @@ from deepchem.utils.dft_utils import LibcintWrapper, AtomCGTOBasis, CGTOBasis
 from deepchem.utils.dft_utils.hamilton.intor.utils import np2ctypes, int2ctypes, NDIM, CGTO, c_null_ptr
 
 
-def evl_ft(shortname: str, wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Tensor:
+def evl_ft(shortname: str, wrapper: LibcintWrapper,
+           gvgrid: torch.Tensor) -> torch.Tensor:
     r"""
     Evaluate the Fourier Transform-ed gaussian type orbital at the given gvgrid.
     The Fourier Transform is defined as:
@@ -24,9 +25,9 @@ def evl_ft(shortname: str, wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> tor
     >>> from deepchem.utils.dft_utils import LibcintWrapper, AtomCGTOBasis, CGTOBasis
     >>> from deepchem.utils.dft_utils.hamilton.intor.gtoft import evl_ft
     >>> # Create a simple basis
-    >>> basis = CGTOBasis(angmom=0, alphas=torch.tensor([1.0]), 
+    >>> basis = CGTOBasis(angmom=0, alphas=torch.tensor([1.0]),
     ...                   coeffs=torch.tensor([1.0]), normalized=True)
-    >>> atom = AtomCGTOBasis(atomz=1, bases=[basis], 
+    >>> atom = AtomCGTOBasis(atomz=1, bases=[basis],
     ...                      pos=torch.tensor([0.0, 0.0, 0.0]))
     >>> wrapper = LibcintWrapper([atom])
     >>> # Create grid points
@@ -51,22 +52,29 @@ def evl_ft(shortname: str, wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> tor
 
     """
     if shortname != "":
-        raise NotImplementedError("FT evaluation for '%s' is not implemented" % shortname)
+        raise NotImplementedError("FT evaluation for '%s' is not implemented" %
+                                  shortname)
     return _EvalGTO_FT.apply(*wrapper.params, gvgrid, wrapper, shortname)
 
+
 # shortcuts
+
+
 def eval_gto_ft(wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Tensor:
     return evl_ft("", wrapper, gvgrid)
 
+
 class _EvalGTO_FT(torch.autograd.Function):
+
     @staticmethod
-    def forward(ctx,  # type: ignore
-                alphas: torch.Tensor,
-                coeffs: torch.Tensor,
-                pos: torch.Tensor,
-                gvgrid: torch.Tensor,
-                wrapper: LibcintWrapper,
-                shortname: str) -> torch.Tensor:
+    def forward(
+            ctx,  # type: ignore
+            alphas: torch.Tensor,
+            coeffs: torch.Tensor,
+            pos: torch.Tensor,
+            gvgrid: torch.Tensor,
+            wrapper: LibcintWrapper,
+            shortname: str) -> torch.Tensor:
         """Forward pass of _EvalGTO_FT.
 
         Parameters
@@ -96,7 +104,9 @@ class _EvalGTO_FT(torch.autograd.Function):
         return res
 
     @staticmethod
-    def backward(ctx, grad_res: torch.Tensor) -> Tuple[Optional[torch.Tensor], ...]:  # type: ignore
+    def backward(
+        ctx, grad_res: torch.Tensor
+    ) -> Tuple[Optional[torch.Tensor], ...]:  # type: ignore
         """Backward pass of _EvalGTO_FT.
 
         Parameters
@@ -115,15 +125,18 @@ class _EvalGTO_FT(torch.autograd.Function):
             Gradients for GTO Fourier transform evaluation are not implemented
 
         """
-        raise NotImplementedError("Gradients of GTO FT evals are not implemented")
+        raise NotImplementedError(
+            "Gradients of GTO FT evals are not implemented")
 
-def gto_ft_evaluator(wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Tensor:
+
+def gto_ft_evaluator(wrapper: LibcintWrapper,
+                     gvgrid: torch.Tensor) -> torch.Tensor:
     """Evaluates Fourier Transform of the Gaussian type orbital basis functions.
 
     The Fourier Transform is defined as:
     FT(f(r)) = ∫f(r) * exp(-ik·r) dr
 
-    NOTE: This function does not propagate gradients and should only be used 
+    NOTE: This function does not propagate gradients and should only be used
     internally within this module. The implementation is primarily based on PySCF.
     https://github.com/pyscf/pyscf/blob/c9aa2be600d75a97410c3203abf35046af8ca615/pyscf/gto/ft_ao.py#L107
 
@@ -133,9 +146,9 @@ def gto_ft_evaluator(wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Ten
     >>> from deepchem.utils.dft_utils import LibcintWrapper, AtomCGTOBasis, CGTOBasis
     >>> from deepchem.utils.dft_utils.hamilton.intor.gtoft import gto_ft_evaluator
     >>> # Create a simple hydrogen atom basis
-    >>> basis = CGTOBasis(angmom=0, alphas=torch.tensor([1.0]), 
+    >>> basis = CGTOBasis(angmom=0, alphas=torch.tensor([1.0]),
     ...                   coeffs=torch.tensor([1.0]), normalized=True)
-    >>> atom = AtomCGTOBasis(atomz=1, bases=[basis], 
+    >>> atom = AtomCGTOBasis(atomz=1, bases=[basis],
     ...                      pos=torch.tensor([0.0, 0.0, 0.0]))
     >>> wrapper = LibcintWrapper([atom])
     >>> # Create grid points in reciprocal space
@@ -149,14 +162,14 @@ def gto_ft_evaluator(wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Ten
     wrapper: LibcintWrapper
         Wrapper containing the Gaussian basis functions to be transformed
     gvgrid: torch.Tensor
-        Grid points in reciprocal space with shape (ngrid, 3) where the 
+        Grid points in reciprocal space with shape (ngrid, 3) where the
         Fourier transform is evaluated
 
     Returns
     -------
     torch.Tensor
         Fourier-transformed orbital values with shape (nao, ngrid)
-        where nao is the number of atomic orbitals and ngrid is the number 
+        where nao is the number of atomic orbitals and ngrid is the number
         of grid points
 
     """
@@ -189,13 +202,14 @@ def gto_ft_evaluator(wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Ten
         coeffs=torch.tensor([c], dtype=dtype, device=device),
         normalized=True,
     )
-    ghost_atom_basis = AtomCGTOBasis(
-        atomz=0,
-        bases=[ghost_basis],
-        pos=torch.tensor([0.0, 0.0, 0.0], dtype=dtype, device=device)
-    )
-    ghost_wrapper = LibcintWrapper(
-        [ghost_atom_basis], spherical=wrapper.spherical, lattice=wrapper.lattice)
+    ghost_atom_basis = AtomCGTOBasis(atomz=0,
+                                     bases=[ghost_basis],
+                                     pos=torch.tensor([0.0, 0.0, 0.0],
+                                                      dtype=dtype,
+                                                      device=device))
+    ghost_wrapper = LibcintWrapper([ghost_atom_basis],
+                                   spherical=wrapper.spherical,
+                                   lattice=wrapper.lattice)
     wrapper, ghost_wrapper = LibcintWrapper.concatenate(wrapper, ghost_wrapper)
     shls_slice = (*wrapper.shell_idxs, *ghost_wrapper.shell_idxs)
     ao_loc = wrapper.full_shell_to_aoloc
@@ -209,15 +223,10 @@ def gto_ft_evaluator(wrapper: LibcintWrapper, gvgrid: torch.Tensor) -> torch.Ten
     outshape = (wrapper.nao(), nGv)
     out = np.zeros(outshape, dtype=np.complex128, order="C")
 
-    fn(intor, eval_gz, fill, np2ctypes(out),
-       int2ctypes(1), (ctypes.c_int * len(shls_slice))(*shls_slice),
-       np2ctypes(ao_loc),
-       ctypes.c_double(0),
-       np2ctypes(GvT),
-       p_b, p_gxyzT, p_gs,
-       int2ctypes(nGv),
-       np2ctypes(atm), int2ctypes(len(atm)),
-       np2ctypes(bas), int2ctypes(len(bas)),
-       np2ctypes(env))
+    fn(intor, eval_gz, fill, np2ctypes(out), int2ctypes(1),
+       (ctypes.c_int * len(shls_slice))(*shls_slice), np2ctypes(ao_loc),
+       ctypes.c_double(0), np2ctypes(GvT), p_b, p_gxyzT, p_gs, int2ctypes(nGv),
+       np2ctypes(atm), int2ctypes(len(atm)), np2ctypes(bas),
+       int2ctypes(len(bas)), np2ctypes(env))
 
     return torch.as_tensor(out, dtype=get_complex_dtype(dtype), device=device)
