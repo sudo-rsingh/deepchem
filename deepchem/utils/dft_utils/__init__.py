@@ -104,12 +104,6 @@ try:
     from deepchem.utils.dft_utils.qccalc.hf import HFEngine
     from deepchem.utils.dft_utils.qccalc.ks import KS
     from deepchem.utils.dft_utils.qccalc.ks import KSEngine
-<<<<<<< HEAD
 except ModuleNotFoundError as e:
     warnings.warn(
         f'Skipped loading DFT utilities, missing some dependencies: {e}')
-=======
-except Exception as e:
-    warnings.warn(f'{e}')
-
->>>>>>> 4d479504d (finctionable implementation)
