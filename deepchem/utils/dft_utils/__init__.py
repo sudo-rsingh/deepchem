@@ -105,4 +105,5 @@ try:
     from deepchem.utils.dft_utils.qccalc.ks import KS
     from deepchem.utils.dft_utils.qccalc.ks import KSEngine
 except ModuleNotFoundError as e:
-    warnings.warn(f'Skipped loading DFT utilities, missing some dependencies: {e}')
+    warnings.warn(
+        f'Skipped loading DFT utilities, missing some dependencies: {e}')
