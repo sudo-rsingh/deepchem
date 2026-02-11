@@ -105,14 +105,14 @@ class _EvalGTO_FT(torch.autograd.Function):
 
     @staticmethod
     def backward(
-        ctx, grad_res: torch.Tensor
+        ctx, *grad_outputs: torch.Tensor
     ) -> Tuple[Optional[torch.Tensor], ...]:  # type: ignore
         """Backward pass of _EvalGTO_FT.
 
         Parameters
         ----------
-        grad_res: torch.Tensor
-            Gradient of the loss with respect to the output tensor
+        *grad_outputs: torch.Tensor
+            Gradients of the loss with respect to the output tensor
 
         Returns
         -------
