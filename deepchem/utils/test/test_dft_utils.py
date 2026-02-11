@@ -1957,3 +1957,72 @@ def test_evl_ft_error():
     with pytest.raises(NotImplementedError,
                        match="FT evaluation for 'ip' is not implemented"):
         evl_ft("ip", wrapper, gvgrid)
+
+
+@pytest.mark.torch
+def test_estimate_g_cutoff():
+    """Test estimate_g_cutoff function from hcgto_pbc module."""
+    import torch
+    from deepchem.utils.dft_utils.hamilton.hcgto_pbc import estimate_g_cutoff
+
+    # Test with simple tensor values
+    precision = 1e-8
+    coeffs = torch.tensor([1.0, 0.5])
+    alphas = torch.tensor([0.5, 1.0])
+
+    gcut = estimate_g_cutoff(precision, coeffs, alphas)
+    assert isinstance(gcut, float)
+    assert gcut > 0
+
+    # Test with single values
+    coeffs_single = torch.tensor([1.0])
+    alphas_single = torch.tensor([1.0])
+
+    gcut_single = estimate_g_cutoff(precision, coeffs_single, alphas_single)
+    assert isinstance(gcut_single, float)
+    assert gcut_single > 0
+
+
+@pytest.mark.torch
+def test_get_gcut():
+    """Test get_gcut function from hcgto_pbc module."""
+    import torch
+    from deepchem.utils.dft_utils import AtomCGTOBasis, LibcintWrapper, loadbasis
+    from deepchem.utils.dft_utils.hamilton.hcgto_pbc import get_gcut
+
+    # Create test data similar to other tests
+    dtype = torch.double
+    pos = torch.tensor([0.0, 0.0, 0.0], dtype=dtype)
+    atomz = 1
+    basis = loadbasis("%d:%s" % (atomz, "STO-3G"),
+                      dtype=dtype,
+                      requires_grad=False)
+    atombasis = AtomCGTOBasis(atomz=atomz, bases=basis, pos=pos)
+    wrapper = LibcintWrapper([atombasis], spherical=True)
+
+    # Test with single wrapper and min reduction (default)
+    precision = 1e-8
+    gcut_min = get_gcut(precision, [wrapper], reduce="min")
+    assert isinstance(gcut_min, float)
+    assert gcut_min > 0
+
+    # Test with max reduction
+    gcut_max = get_gcut(precision, [wrapper], reduce="max")
+    assert isinstance(gcut_max, float)
+    assert gcut_max > 0
+
+    # Test with multiple wrappers (same wrapper twice)
+    wrappers = [wrapper, wrapper]
+    gcut_multi_min = get_gcut(precision, wrappers, reduce="min")
+    gcut_multi_max = get_gcut(precision, wrappers, reduce="max")
+
+    # Since both wrappers are identical, min and max should be equal
+    assert abs(gcut_multi_min - gcut_multi_max) < 1e-10
+
+    # Test with unknown reduction strategy (should raise ValueError)
+    # Only raises error when there are multiple wrappers
+    try:
+        get_gcut(precision, [wrapper, wrapper], reduce="unknown")
+        assert False, "Should have raised ValueError"
+    except ValueError as e:
+        assert "Unknown reduce" in str(e)
