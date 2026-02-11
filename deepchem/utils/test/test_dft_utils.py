@@ -2026,3 +2026,51 @@ def test_get_gcut():
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert "Unknown reduce" in str(e)
+
+
+@pytest.mark.torch
+def test__check_and_set_pbc():
+    """Test _check_and_set_pbc private function."""
+    import torch
+    from deepchem.utils.dft_utils.hamilton.intor.pbcintor import _check_and_set_pbc
+    from deepchem.utils.dft_utils import AtomCGTOBasis, LibcintWrapper, loadbasis
+    from deepchem.utils.dft_utils.hamilton.intor.lattice import Lattice
+
+    # Create a shared lattice
+    a = torch.tensor([[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]],
+                     dtype=torch.float64)
+    lattice = Lattice(a)
+
+    # Create two atoms with shared basis
+    pos1 = torch.tensor([0.0, 0.0, 0.0], dtype=torch.float64)
+    pos2 = torch.tensor([1.0, 0.0, 0.0], dtype=torch.float64)
+    basis = loadbasis("1:STO-3G", dtype=torch.float64, requires_grad=False)
+    atom1 = AtomCGTOBasis(atomz=1, bases=basis, pos=pos1)
+    atom2 = AtomCGTOBasis(atomz=1, bases=basis, pos=pos2)
+
+    # Create a single wrapper and get subsets (ensures same parent)
+    combined_wrapper = LibcintWrapper([atom1, atom2],
+                                      spherical=True,
+                                      lattice=lattice)
+    wrapper = combined_wrapper[:1]  # First atom
+    other_wrapper = combined_wrapper[1:]  # Second atom
+
+    # Test with other is None
+    result1 = _check_and_set_pbc(wrapper, None)
+    assert result1 is wrapper
+
+    # Test with compatible other (same lattice)
+    result2 = _check_and_set_pbc(wrapper, other_wrapper)
+    assert result2 is other_wrapper
+    assert result2.lattice is wrapper.lattice
+
+    # Test with incompatible lattice (should raise AssertionError)
+    a_diff = torch.tensor([[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]],
+                          dtype=torch.float64)
+    lattice_diff = Lattice(a_diff)
+    wrapper_diff = LibcintWrapper([atom2], spherical=True, lattice=lattice_diff)
+    try:
+        _check_and_set_pbc(wrapper, wrapper_diff)
+        assert False, "Should have raised AssertionError"
+    except AssertionError:
+        pass  # Expected
