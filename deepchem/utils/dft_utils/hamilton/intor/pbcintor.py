@@ -9,19 +9,20 @@ from deepchem.utils.dft_utils.hamilton.intor.utils import NDIM
 
 @dataclass
 class PBCIntOption:
-    """Configuration class for periodic boundary condition (PBC) integral parameters.
+    """PBCIntOption is a class that contains parameters for the PBC integrals.
 
     Examples
     --------
     >>> from deepchem.utils.dft_utils import PBCIntOption
     >>> pbc = PBCIntOption()
-    PBCIntOption(precision=1e-10, kpt_diff_tol=1e-08)
+    >>> pbc.get_default()
+    PBCIntOption(precision=1e-08, kpt_diff_tol=1e-06)
 
     Attributes
     ----------
     precision: float (default 1e-8)
-        Precision of the integral to limit the lattice sum.       
-    kpt_diff_tol : float (default 1e-6)
+        Precision of the integral to limit the lattice sum.
+    kpt_diff_tol: float (default 1e-6)
         Difference between k-points to be regarded as the same.
 
     """
