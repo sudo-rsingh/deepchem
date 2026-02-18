@@ -43,7 +43,9 @@ class KSCalc(object):
 
     def aodmtot(self) -> torch.Tensor:
         """
-        Both interacting and non-interacting system's total energy can be expressed in terms of the density matrix. The ground state properties of a system can be calculated by minimizing the energy w.r.t the density matrix.
+        Both interacting and non-interacting system's total energy can be expressed in terms of the
+        density matrix. The ground state properties of a system can be calculated by minimizing the
+        energy w.r.t the density matrix.
 
         Returns
         -------
