@@ -1,12 +1,9 @@
-
-from typing import Union, Tuple, List, Any
+from typing import Any
 import torch
 import math
 
 
-class AtomsTorch:
-    """Torch version of Atoms object that holds all system and cell parameters."""
-
+class PWSol:
     def __init__(self, atom, pos, a, ecut, Z, s, f, device=None, rdtype=torch.float64):
         self.device = device or torch.device("cpu")
         self.rdtype = rdtype
@@ -52,12 +49,12 @@ class AtomsTorch:
         self.pos = torch.atleast_2d(self.pos)
         self.Z = self.Z.to(self.rdtype)
 
-        R = self.a * torch.eye(3, dtype=self.rdtype, device=self.device)
-        self.R = R
-        self.Omega = torch.abs(torch.det(R))
+        #R = self.a * torch.eye(3, dtype=self.rdtype, device=self.device)
+        self.R = self.a
+        self.Omega = torch.abs(torch.det(self.R))
 
         Sinv = torch.diag(1.0 / self.s.to(self.rdtype))
-        self.r = M @ Sinv @ R.T
+        self.r = M @ Sinv @ self.R.T
 
     def _set_G(self, N):
         Rinv = torch.linalg.inv(self.R)
@@ -166,19 +163,88 @@ def coulomb(atoms, op):
     return op.J(Vcoul * atoms.Sf)
 
 
-def get_Eewald(atoms: Any, gcut: float = 2.0, gamma: float = 1e-8, dtype=torch.float64):
-    Z = torch.as_tensor(atoms.Z, dtype=dtype)
-    R = torch.as_tensor(atoms.R, dtype=dtype)
-    Omega = float(atoms.Omega)
-    pos = torch.as_tensor(atoms.pos, dtype=dtype)
-    N = int(atoms.Natoms)
+def get_Eewald(atoms: Any, gcut: float = 2.0, gamma: float = 1e-8):
+    dtype = atoms.rdtype
+    device = atoms.device
+
+    Z = atoms.Z.to(dtype)
+    R = atoms.R.to(dtype)
+    Omega = atoms.Omega
+    pos = atoms.pos.to(dtype)
+
+    Natoms = atoms.Natoms
 
     gexp = -math.log(gamma)
-    nu = torch.tensor(0.5 * math.sqrt(gcut**2 / gexp), dtype=dtype)
+    nu = 0.5 * math.sqrt(gcut**2 / gexp)
+    nu = torch.tensor(nu, dtype=dtype, device=device)
 
-    Eewald = -nu / torch.sqrt(torch.tensor(torch.pi, dtype=dtype)) * torch.sum(Z**2)
-    Eewald += (-math.pi * torch.sum(Z).item() ** 2) / (2.0 * (nu**2).item() * Omega)
-    return Eewald
+    E = -nu / torch.sqrt(torch.tensor(math.pi, dtype=dtype, device=device)) \
+        * torch.sum(Z**2)
+
+    E += -math.pi * (torch.sum(Z)**2) / (2.0 * nu**2 * Omega)
+
+    Rnorm = torch.linalg.norm(R, dim=1)
+    tmax = math.sqrt(0.5 * gexp) / nu.item()
+    s = torch.round(tmax / Rnorm + 1.5).to(torch.long)
+
+    m1 = torch.arange(-s[0], s[0]+1, device=device)
+    m2 = torch.arange(-s[1], s[1]+1, device=device)
+    m3 = torch.arange(-s[2], s[2]+1, device=device)
+
+    M1, M2, M3 = torch.meshgrid(m1, m2, m3, indexing="ij")
+    M = torch.stack([M1.flatten(), M2.flatten(), M3.flatten()], dim=1)
+
+    mask = ~((M[:,0]==0) & (M[:,1]==0) & (M[:,2]==0))
+    M = M[mask].to(dtype)
+
+    T = M @ R   # lattice translations
+
+    for i in range(Natoms):
+        for j in range(Natoms):
+            ZiZj = Z[i] * Z[j]
+            dR = pos[i] - pos[j]
+
+            # periodic images
+            if T.shape[0] > 0:
+                rvec = dR.unsqueeze(0) - T
+                rmag = torch.linalg.norm(rvec, dim=1)
+                E += 0.5 * ZiZj * torch.sum(torch.erfc(nu * rmag) / rmag)
+
+            # direct term (i ≠ j)
+            if i != j:
+                r0 = torch.linalg.norm(dR)
+                E += 0.5 * ZiZj * torch.erfc(nu * r0) / r0
+
+    Gmat = 2.0 * math.pi * torch.linalg.inv(R.T)
+    Gnorm = torch.linalg.norm(Gmat, dim=1)
+
+    s = torch.round(gcut / Gnorm + 1.5).to(torch.long)
+
+    m1 = torch.arange(-s[0], s[0]+1, device=device)
+    m2 = torch.arange(-s[1], s[1]+1, device=device)
+    m3 = torch.arange(-s[2], s[2]+1, device=device)
+
+    M1, M2, M3 = torch.meshgrid(m1, m2, m3, indexing="ij")
+    M = torch.stack([M1.flatten(), M2.flatten(), M3.flatten()], dim=1)
+
+    # remove G=0
+    mask = ~((M[:,0]==0) & (M[:,1]==0) & (M[:,2]==0))
+    M = M[mask].to(dtype)
+
+    G = M @ Gmat
+    G2 = torch.linalg.norm(G, dim=1)**2
+
+    pref = (2.0 * math.pi / Omega) \
+           * torch.exp(-0.25 * G2 / nu**2) / G2
+
+    for i in range(Natoms):
+        for j in range(Natoms):
+            ZiZj = Z[i] * Z[j]
+            dR = pos[i] - pos[j]
+            phase = torch.sum(G * dR.unsqueeze(0), dim=1)
+            E += ZiZj * torch.sum(pref * torch.cos(phase))
+
+    return E
 
 
 def get_n_total(atoms, op, Y):
@@ -324,16 +390,54 @@ class SCF:
         W = pseudo_uniform((len(self.atoms.G2c), self.atoms.Nstate), seed)
         self.W = orth(self.op, W)
 
+def basic_scan():
+    etot_all = []
+    for i in [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 1.9, 2.0]:
+        H2 = PWSol(["H", "H"], [[0, 0, 0], [i, 0, 0]], 16, 16, [1, 1], [60, 60, 60], [2])
+        etot_all.append(SCF(H2).run())
+    print(etot_all)
 
 if __name__ == "__main__":
-    sol = AtomsTorch(["H"], [[0, 0, 0]], 16, 16, [1], [60, 60, 60], [1])
-    print("Natoms:", sol.Natoms)
-    print("Omega:", sol.Omega)
-    print("G count:", sol.G.shape[0])
-    print(sol.G2c.shape[0])
+    #sol = AtomsTorch(["H"], [[0, 0, 0]], 16, 16, [1], [60, 60, 60], [1])
+    #print("Natoms:", sol.Natoms)
+    #print("Omega:", sol.Omega)
+    #print("G count:", sol.G.shape[0])
+    #print(sol.G2c.shape[0])
 
-    import time
-    start = time.perf_counter()
-    SCF(sol).run()
-    print(" {:.6f} seconds".format(time.perf_counter() - start))
+    #SCF(sol).run()
+    import numpy as np
+
+    a_values = np.linspace(2.00, 3.00, 15)  # scan range
+    energies = []
+
+    for a in a_values:
+        cell = [
+            [a, 0, 0],
+            [a/2, a*np.sqrt(3)/2, 0],
+            [0, 0, 20]
+        ]
+        scaled_positions = np.array([
+            [0, 0, 0],
+            [1/3, 2/3, 0]
+        ])
+        graphene = PWSol(
+            ['C', 'C'],
+            scaled_positions*a,
+            cell,
+            32,
+            [6, 6],
+            [20, 20, 20],
+            [32]
+        )
+
+        scf = SCF(graphene)
+        energies.append(scf.run(Nit=10000))   # adjust if your SCF stores energy differently
+
+    for a, E in zip(a_values, energies):
+        print(f"a = {a:.4f} Å  |  E = {E:.4f}")
+    #graphene = PWSol(['C', 'C'], [[0.0, 0.0, 0.0], [1.23, 0.71, 0.0]], 2.46, 32, [6, 6], [20, 20, 20], [32])
+    #SCF(graphene).run()
+
+    #basic_scan()
+
 
