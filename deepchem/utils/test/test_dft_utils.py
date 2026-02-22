@@ -2074,3 +2074,42 @@ def test__check_and_set_pbc():
         assert False, "Should have raised AssertionError"
     except AssertionError:
         pass  # Expected
+
+
+@pytest.mark.torch
+def test__concat_atm_bas_env():
+    """Test _concat_atm_bas_env private function."""
+    import torch
+    import numpy as np
+    from deepchem.utils.dft_utils.hamilton.intor.pbcintor import _concat_atm_bas_env
+    from deepchem.utils.dft_utils import AtomCGTOBasis, LibcintWrapper, loadbasis
+
+    pos1 = torch.tensor([0.0, 0.0, 0.0], dtype=torch.float64)
+    pos2 = torch.tensor([1.5, 0.0, 0.0], dtype=torch.float64)
+    basis = loadbasis("1:STO-3G", dtype=torch.float64, requires_grad=False)
+    atom1 = AtomCGTOBasis(atomz=1, bases=basis, pos=pos1)
+    atom2 = AtomCGTOBasis(atomz=1, bases=basis, pos=pos2)
+
+    wrapper1 = LibcintWrapper([atom1], spherical=True, lattice=None)
+    wrapper2 = LibcintWrapper([atom2], spherical=True, lattice=None)
+
+    atm, bas, env, ao_loc = _concat_atm_bas_env(wrapper1, wrapper2)
+
+    assert atm.shape == (2, 6)
+    assert bas.shape == (2, 8)
+    assert env.shape == (60,)
+    assert ao_loc.shape == (3,)
+
+    assert atm[0, 0] == 1  # atomic number (H)
+    assert atm[1, 0] == 1  # atomic number (H)
+
+    assert bas[0, 0] == 0  # atom index for first shell
+    assert bas[1, 0] == 1  # atom index for second shell (offset applied)
+
+    assert np.array_equal(ao_loc, np.array([0, 1, 2], dtype=np.int32))
+
+    atm3, bas3, env3, ao_loc3 = _concat_atm_bas_env(wrapper1, wrapper2,
+                                                    wrapper1)
+    assert atm3.shape == (3, 6)
+    assert bas3.shape == (3, 8)
+    assert ao_loc3.shape == (4,)
