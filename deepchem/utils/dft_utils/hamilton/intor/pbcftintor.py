@@ -231,9 +231,9 @@ class _PBCInt2cFTFunction(torch.autograd.Function):
 
         Parameters
         ----------
-        ctx : Context
+        ctx: Context
             Context object with saved tensors.
-        grad_out : torch.Tensor
+        grad_out: torch.Tensor
             Gradient of the loss with respect to the output.
 
         Returns
@@ -259,22 +259,6 @@ class PBCFTIntor(object):
     Fourier transform methods. It interfaces with the libcint library to
     perform the actual computations.
 
-    Note
-    ----
-    This class is designed for single-use (one-time integral computation).
-    Calling `calc()` more than once will raise an assertion error.
-
-    Attributes
-    ----------
-    int_type : str
-        The type of integral being computed (e.g., "int1e").
-    wrappers : List[LibcintWrapper]
-        List of wrapper objects containing basis function data.
-    dtype : torch.dtype
-        Data type of the computation.
-    device : torch.device
-        Device on which computations are performed.
-
     Examples
     --------
     >>> import torch
@@ -298,6 +282,11 @@ class PBCFTIntor(object):
     >>> result = intor.calc()
     >>> result.shape
     torch.Size([1, 1, 1, 1])
+
+    Note
+    ----
+    This class is designed for single-use (one-time integral computation).
+    Calling `calc()` more than once will raise an assertion error.
 
     """
 
@@ -383,11 +372,10 @@ class PBCFTIntor(object):
         lattice summation and Fourier transform, replicating the
         `ft_aopair_kpts` function from pyscf [1].
 
-
         Returns
         -------
         torch.Tensor
-            The computed 2-center integral tensor.
+            Computed 2-center integral tensor.
 
         Reference
         ---------
@@ -435,7 +423,7 @@ class PBCFTIntor(object):
             cintor,
             eval_gz,
             fill,
-            np2ctypes(out),  # ???
+            np2ctypes(out),
             int2ctypes(nkpts),
             int2ctypes(self.ncomp),
             int2ctypes(len(self.ls)),
