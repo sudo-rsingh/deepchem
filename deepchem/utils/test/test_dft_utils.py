@@ -2115,43 +2115,6 @@ def test__concat_atm_bas_env():
 
 
 @pytest.mark.torch
-def test_pbcft_int1e():
-    """Test pbcft_int1e function for PBC Fourier transform integrals."""
-    from deepchem.utils.dft_utils import AtomCGTOBasis, LibcintWrapper, loadbasis, Lattice
-    from deepchem.utils.dft_utils.hamilton.intor.pbcftintor import pbcft_int1e
-    from deepchem.utils.dft_utils.hamilton.intor.pbcintor import PBCIntOption
-
-    dtype = torch.float64
-    a = torch.tensor([[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]],
-                     dtype=dtype)
-    lattice = Lattice(a)
-
-    pos = torch.tensor([0.0, 0.0, 0.0], dtype=dtype)
-    basis = loadbasis("1:STO-3G", dtype=dtype, requires_grad=False)
-    atom = AtomCGTOBasis(atomz=1, bases=basis, pos=pos)
-    wrapper = LibcintWrapper([atom], spherical=True, lattice=lattice)
-
-    gvgrid = torch.tensor([[0.1, 0.0, 0.0], [0.0, 0.1, 0.0]], dtype=dtype)
-    kpts = torch.tensor([[0.0, 0.0, 0.0]], dtype=dtype)
-
-    result = pbcft_int1e("ovlp", wrapper, gvgrid=gvgrid, kpts=kpts)
-    assert result.shape == torch.Size([1, 1, 1, 2])
-    assert result.dtype in [torch.complex64, torch.complex128]
-
-    gvgrid2 = torch.tensor([[0.1, 0.0, 0.0]], dtype=dtype)
-    kpts2 = torch.tensor([[0.0, 0.0, 0.0], [0.1, 0.0, 0.0]], dtype=dtype)
-    result2 = pbcft_int1e("ovlp", wrapper, gvgrid=gvgrid2, kpts=kpts2)
-    assert result2.shape == torch.Size([2, 1, 1, 1])
-
-    result3 = pbcft_int1e("ovlp", wrapper)
-    assert result3.shape == torch.Size([1, 1, 1, 1])
-
-    options = PBCIntOption(precision=1e-10)
-    result4 = pbcft_int1e("ovlp", wrapper, gvgrid=gvgrid2, options=options)
-    assert result4.shape == torch.Size([1, 1, 1, 1])
-
-
-@pytest.mark.torch
 def test_pbcft_overlap():
     """Test pbcft_overlap function."""
     from deepchem.utils.dft_utils import AtomCGTOBasis, LibcintWrapper, loadbasis, Lattice

@@ -14,13 +14,14 @@ from deepchem.utils.dft_utils.hamilton.intor.namemgr import IntorNameManager
 
 
 # Fourier transform integrals
-def pbcft_int1e(shortname: str,
-                wrapper: LibcintWrapper,
-                other: Optional[LibcintWrapper] = None,
-                gvgrid: Optional[torch.Tensor] = None,
-                kpts: Optional[torch.Tensor] = None,
-                options: Optional[PBCIntOption] = None):
-    r"""
+def pbcft_overlap(wrapper: LibcintWrapper,
+                  shortname: str = 'ovlp',
+                  other: Optional[LibcintWrapper] = None,
+                  gvgrid: Optional[torch.Tensor] = None,
+                  kpts: Optional[torch.Tensor] = None,
+                  options: Optional[PBCIntOption] = None):
+    r"""Compute PBC Fourier transform overlap integrals.
+
     Performing the periodic boundary condition (PBC) on 1-electron Fourier
     Transform integrals, i.e.
 
@@ -28,87 +29,6 @@ def pbcft_int1e(shortname: str,
     \sum_\mathbf{T} e^{-i \mathbf{k}\cdot\mathbf{T}} \int \exp(-i\mathbf{G}\cdot\mathbf{r})
     \phi_i(\mathbf{r}) \phi_j(\mathbf{r}-\mathbf{T})\ \mathrm{d}\mathbf{r}
     $$
-
-    Examples
-    --------
-    >>> import torch
-    >>> from deepchem.utils.dft_utils import LibcintWrapper, AtomCGTOBasis, loadbasis, Lattice
-    >>> from deepchem.utils.dft_utils.hamilton.intor.pbcftintor import pbcft_int1e
-    >>> # Create a simple lattice
-    >>> a = torch.tensor([[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]], dtype=torch.float64)
-    >>> lattice = Lattice(a)
-    >>> # Create atom with basis
-    >>> pos = torch.tensor([0.0, 0.0, 0.0], dtype=torch.float64)
-    >>> basis = loadbasis("1:STO-3G", dtype=torch.float64, requires_grad=False)
-    >>> atom = AtomCGTOBasis(atomz=1, bases=basis, pos=pos)
-    >>> wrapper = LibcintWrapper([atom], spherical=True, lattice=lattice)
-    >>> # Create G-grid and k-points
-    >>> gvgrid = torch.tensor([[0.1, 0.0, 0.0], [0.0, 0.1, 0.0]], dtype=torch.float64)
-    >>> kpts = torch.tensor([[0.0, 0.0, 0.0]], dtype=torch.float64)
-    >>> # Compute overlap integral
-    >>> result = pbcft_int1e("ovlp", wrapper, gvgrid=gvgrid, kpts=kpts)
-    >>> result.shape  # (nkpts, ncomp, nwrapper, nother, nggrid)
-    torch.Size([1, 1, 1, 2])
-
-    Parameters
-    ----------
-    shortname: str
-        The shortname of the integral (i.e. without the prefix `int1e_` or else)
-    wrapper: LibcintWrapper
-        The environment wrapper containing the basis
-    other: Optional[LibcintWrapper]
-        Another environment wrapper containing the basis. This environment
-        must have the same complete environment as `wrapper` (e.g. `other` can be
-        a subset of `wrapper`). If unspecified, then `other = wrapper`.
-    gvgrid: Optional[torch.Tensor]
-        The reciprocal coordinate of $\mathbf{G}$ with shape `(nggrid, ndim)`.
-        If unspecified, then it is assumed to be all zeros.
-    kpts: Optional[torch.Tensor]
-        k-points where the integration is supposed to be performed. If specified,
-        it should have the shape of `(nkpts, ndim)`. Otherwise, it is assumed
-        to be all zeros.
-    options: Optional[PBCIntOption]
-        The integration options. If unspecified, then just use the default
-        value of `PBCIntOption`.
-
-    Returns
-    -------
-    torch.Tensor
-        A complex tensor representing the 1-electron integral with shape
-        `(nkpts, *ncomp, nwrapper, nother, nggrid)` where `ncomp` is the Cartesian
-        components of the integral, e.g. `"ipovlp"` integral will have 3
-        components each for x, y, and z.
-
-
-    """
-
-    # check and set the default values
-    other1 = _check_and_set_pbc(wrapper, other)
-    options1 = get_default_options(options)
-    kpts1 = get_default_kpts(kpts, dtype=wrapper.dtype, device=wrapper.device)
-    gvgrid1 = get_default_kpts(gvgrid,
-                               dtype=wrapper.dtype,
-                               device=wrapper.device)
-
-    assert isinstance(wrapper.lattice,
-                      Lattice)  # check if wrapper has a lattice
-    return _PBCInt2cFTFunction.apply(*wrapper.params, *wrapper.lattice.params,
-                                     gvgrid1, kpts1, [wrapper, other1],
-                                     IntorNameManager("int1e",
-                                                      shortname), options1)
-
-
-# shortcuts
-def pbcft_overlap(wrapper: LibcintWrapper,
-                  other: Optional[LibcintWrapper] = None,
-                  gvgrid: Optional[torch.Tensor] = None,
-                  kpts: Optional[torch.Tensor] = None,
-                  options: Optional[PBCIntOption] = None):
-    """Compute PBC Fourier transform overlap integrals.
-
-    This is a convenience function that calls `pbcft_int1e` with the "ovlp"
-    shortname to compute overlap integrals in periodic boundary conditions
-    with Fourier transform.
 
     Examples
     --------
@@ -129,7 +49,7 @@ def pbcft_overlap(wrapper: LibcintWrapper,
     >>> result = pbcft_overlap(wrapper, gvgrid=gvgrid)
     >>> result.shape
     torch.Size([1, 1, 1, 2])
- 
+
     Parameters
     ----------
     wrapper : LibcintWrapper
@@ -154,8 +74,20 @@ def pbcft_overlap(wrapper: LibcintWrapper,
         A complex tensor representing the overlap integral with shape
         `(nkpts, *ncomp, nwrapper, nother, nggrid)`.
 
-   """
-    return pbcft_int1e("ovlp", wrapper, other, gvgrid, kpts, options)
+    """
+    # check and set the default values
+    other1 = _check_and_set_pbc(wrapper, other)
+    options1 = get_default_options(options)
+    kpts1 = get_default_kpts(kpts, dtype=wrapper.dtype, device=wrapper.device)
+    gvgrid1 = get_default_kpts(gvgrid,
+                               dtype=wrapper.dtype,
+                               device=wrapper.device)
+
+    assert isinstance(wrapper.lattice, Lattice)
+    return _PBCInt2cFTFunction.apply(*wrapper.params, *wrapper.lattice.params,
+                                     gvgrid1, kpts1, [wrapper, other1],
+                                     IntorNameManager("int1e",
+                                                      shortname), options1)
 
 
 # torch autograd function wrappers
@@ -419,28 +351,13 @@ class PBCFTIntor(object):
         p_gxyzT = c_null_ptr()
         p_mesh = (ctypes.c_int * 3)(0, 0, 0)
         p_b = (ctypes.c_double * 1)(0)
-        drv(
-            cintor,
-            eval_gz,
-            fill,
-            np2ctypes(out),
-            int2ctypes(nkpts),
-            int2ctypes(self.ncomp),
-            int2ctypes(len(self.ls)),
-            np2ctypes(self.ls),
-            np2ctypes(expkl),
-            (ctypes.c_int * len(shls_slice))(*shls_slice),
-            np2ctypes(ao_loc),
-            np2ctypes(self.GvT),
-            p_b,
-            p_gxyzT,
-            p_mesh,
-            int2ctypes(nGv),
-            np2ctypes(atm),
-            int2ctypes(len(atm)),
-            np2ctypes(bas),
-            int2ctypes(len(bas)),
-            np2ctypes(env))
+        drv(cintor, eval_gz, fill, np2ctypes(out), int2ctypes(nkpts),
+            int2ctypes(self.ncomp), int2ctypes(len(self.ls)),
+            np2ctypes(self.ls), np2ctypes(expkl),
+            (ctypes.c_int * len(shls_slice))(*shls_slice), np2ctypes(ao_loc),
+            np2ctypes(self.GvT), p_b, p_gxyzT, p_mesh, int2ctypes(nGv),
+            np2ctypes(atm), int2ctypes(len(atm)), np2ctypes(bas),
+            int2ctypes(len(bas)), np2ctypes(env))
 
         out_tensor = torch.as_tensor(out,
                                      dtype=get_complex_dtype(self.dtype),
