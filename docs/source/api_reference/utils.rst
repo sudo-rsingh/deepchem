@@ -306,6 +306,9 @@ The utilites here are used to create an object that contains information about a
 .. autoclass:: deepchem.utils.dft_utils.xc.base_xc.MulBaseXC
   :members:
 
+.. autoclass:: deepchem.utils.dft_utils.xc.pytorch_xc.PyTorchLDA
+  :members:
+
 .. autoclass:: deepchem.utils.dft_utils.xc.libxc_wrapper.CalcLDALibXCPol
   :members:
 
