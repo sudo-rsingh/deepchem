@@ -57,13 +57,12 @@ class PyTorchLDA(BaseXC):
         torch.Tensor
             Exchange energy density.
         """
-        C_x = torch.tensor(0.75 * ((3.0 / torch.pi) ** (1.0 / 3.0)))
+        C_x = torch.tensor(0.75 * ((3.0 / torch.pi)**(1.0 / 3.0)))
         n_safe = torch.clamp(n, min=1e-12)
         return -C_x * safepow(n_safe, 4.0 / 3.0)
 
     def get_edensityxc(
-        self, densinfo: Union[ValGrad, SpinParam[ValGrad]]
-    ) -> torch.Tensor:
+            self, densinfo: Union[ValGrad, SpinParam[ValGrad]]) -> torch.Tensor:
         """Returns the xc energy density (energy per unit volume).
 
         Parameters

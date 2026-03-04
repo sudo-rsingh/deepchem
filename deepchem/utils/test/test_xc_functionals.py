@@ -22,4 +22,4 @@ def test_lda_x():
     # Expected energy - examples/dft/dft_compare.py
     expected_e = -1.023727
 
-    assert np.allclose(e_dc, expected_e)  
+    assert np.allclose(e_dc, expected_e)
