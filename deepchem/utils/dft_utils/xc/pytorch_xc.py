@@ -6,8 +6,12 @@ from deepchem.utils import safepow
 
 
 class PyTorchLDA(BaseXC):
-    """
-    Local Density Approximation (LDA) XC functional.
+    """Local Density Approximation (LDA) XC functional.
+
+    It assumes the electron density at any point in a material can be treated
+    as a uniform electron gas, using the exchange-correlation energy from a
+    homogeneous electron gas at that local density. Approximates
+    exchange-correlation energy based only on local electron density.
 
     Examples
     --------
@@ -45,7 +49,9 @@ class PyTorchLDA(BaseXC):
         return 1
 
     def lda_x(self, n: torch.Tensor) -> torch.Tensor:
-        """Calculate the LDA exchange energy density.
+        """Calculates the LDA_X exchange energy density based on [1].
+
+        :math: C_x * n^(4/3)
 
         Parameters
         ----------
@@ -56,6 +62,12 @@ class PyTorchLDA(BaseXC):
         -------
         torch.Tensor
             Exchange energy density.
+
+        References
+        ----------
+        [1].. Dirac, P. a. M. (1930). Note on exchange phenomena in the Thomas
+              Atom. Mathematical Proceedings of the Cambridge Philosophical Society,
+              26(3), 376–385. https://doi.org/10.1017/s0305004100016108
         """
         C_x = torch.tensor(0.75 * ((3.0 / torch.pi)**(1.0 / 3.0)))
         n_safe = torch.clamp(n, min=1e-12)
@@ -68,12 +80,7 @@ class PyTorchLDA(BaseXC):
         Parameters
         ----------
         densinfo: Union[ValGrad, SpinParam[ValGrad]]
-            The density information.
-            If the XC is unpolarized, then densinfo is ValGrad.
-            If the XC is polarized, then densinfo is SpinParam[ValGrad].
-            The ValGrad contains the value and gradient of the density.
-            The SpinParam[ValGrad] contains the value and gradient of the density
-            for each spin channel.
+            Local density information of electrons.
 
         Returns
         -------
