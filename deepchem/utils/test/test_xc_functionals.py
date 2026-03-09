@@ -4,6 +4,7 @@ import numpy as np
 
 @pytest.mark.torch
 def test_lda_x():
+    """Testing the LDA_X XC functional."""
     from deepchem.utils.dft_utils.system.mol import Mol
     from deepchem.utils.dft_utils.qccalc.ks import KS
     from deepchem.utils.dft_utils.xc.pytorch_xc import PyTorchLDA

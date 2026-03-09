@@ -15,14 +15,16 @@ class PyTorchLDA(BaseXC):
 
     Examples
     --------
-    >>> import torch
-    >>> from deepchem.utils.dft_utils import ValGrad
-    >>> xc = PyTorchLDA()
-    >>> n = torch.tensor([0.5, 1.0, 2.0], requires_grad=True)
-    >>> densinfo = ValGrad(value=n)
-    >>> edensity = xc.get_edensityxc(densinfo)
-    >>> edensity.shape
-    torch.Size([3])
+    >>> from deepchem.utils.dft_utils import Mol, KS
+    >>> from deepchem.utils.dft_utils.xc.pytorch_xc import PyTorchLDA
+    >>> moldesc = "H 0 0 -0.74; H 0 0 0.74"
+    >>> basis = "sto-3g"
+    >>> system = Mol(moldesc=moldesc, basis=basis)
+    >>> xc_dc = PyTorchLDA("lda_x")
+    >>> ks = KS(system, xc_dc, variational=False)
+    >>> _ = ks.run()
+    >>> ks.energy().item()
+    -1.023726577309795
     """
 
     def __init__(self, name: str = "lda_x"):
@@ -51,7 +53,26 @@ class PyTorchLDA(BaseXC):
     def lda_x(self, n: torch.Tensor) -> torch.Tensor:
         """Calculates the LDA_X exchange energy density based on [1].
 
-        :math: C_x * n^(4/3)
+        :math: E_x(n) = - C_x * n^(4/3)
+        :math: C_x = (3/4) * (3/pi)^(1/3)
+
+        This function evaluates the Dirac exchange energy density for an electron
+        gas. In this approximation, the exchange energy at each point in space is
+        assumed to be the same as that of a homogeneous electron gas with the same
+        local electron density.
+
+        Examples
+        --------
+        >>> from deepchem.utils.dft_utils import Mol, KS
+        >>> from deepchem.utils.dft_utils.xc.pytorch_xc import PyTorchLDA
+        >>> moldesc = "H 0 0 -0.74; H 0 0 0.74"
+        >>> basis = "sto-3g"
+        >>> system = Mol(moldesc=moldesc, basis=basis)
+        >>> xc_dc = PyTorchLDA("lda_x")
+        >>> ks = KS(system, xc_dc, variational=False)
+        >>> _ = ks.run()
+        >>> ks.energy().item()
+        -1.023726577309795
 
         Parameters
         ----------
@@ -76,6 +97,17 @@ class PyTorchLDA(BaseXC):
     def get_edensityxc(
             self, densinfo: Union[ValGrad, SpinParam[ValGrad]]) -> torch.Tensor:
         """Returns the xc energy density (energy per unit volume).
+
+        Examples
+        --------
+        >>> import torch
+        >>> from deepchem.utils.dft_utils.xc.pytorch_xc import PyTorchLDA
+        >>> xc = PyTorchLDA()
+        >>> n = torch.tensor([0.5, 1.0, 2.0], requires_grad=True)
+        >>> densinfo = ValGrad(value=n)
+        >>> edensity = xc.get_edensityxc(densinfo)
+        >>> edensity.shape
+        torch.Size([3])
 
         Parameters
         ----------
