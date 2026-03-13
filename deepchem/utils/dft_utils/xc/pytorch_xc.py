@@ -8,10 +8,16 @@ from deepchem.utils import safepow
 class PyTorchLDA(BaseXC):
     """Local Density Approximation (LDA) XC functional.
 
-    It assumes the electron density at any point in a material can be treated
-    as a uniform electron gas, using the exchange-correlation energy from a
-    homogeneous electron gas at that local density. Approximates
-    exchange-correlation energy based only on local electron density.
+    LDA assumes that, at each point in space, the electrons behave like a uniform
+    electron gas with the same local density. The exchange–correlation energy
+    at that point is therefore taken from the known solution of a homogeneous
+    electron gas.
+
+    In a real material the electron density varies from point to point. But, LDA
+    provides a simple and computationally efficient approximation for exchange–correlation
+    effects. It is often used as a baseline functional because it is fast, numerically
+    stable, and works reasonably well for systems with slowly varying electron densities
+    such as bulk solids.
 
     Examples
     --------
@@ -25,6 +31,17 @@ class PyTorchLDA(BaseXC):
     >>> _ = ks.run()
     >>> ks.energy().item()
     -1.023726577309795
+
+    Notes
+    -----
+    - Available functionals:
+      1. lda_x
+    - Users can use the functinals implemented in this class or they can also create
+      their own functionals by creating a subclass of PyTorchLDA class and implimenting
+      the desired functional.
+    - `getparamnames` method needs to be implemented in all the subclasses of BaseXC.
+    - `init` method usage `getattr` builtin function to find the implemented functional.
+      so there should be no need to update it in normal situation.
     """
 
     def __init__(self, name: str = "lda_x"):
@@ -102,6 +119,7 @@ class PyTorchLDA(BaseXC):
         --------
         >>> import torch
         >>> from deepchem.utils.dft_utils.xc.pytorch_xc import PyTorchLDA
+        >>> from deepchem.utils.dft_utils.data.datastruct import ValGrad
         >>> xc = PyTorchLDA()
         >>> n = torch.tensor([0.5, 1.0, 2.0], requires_grad=True)
         >>> densinfo = ValGrad(value=n)
