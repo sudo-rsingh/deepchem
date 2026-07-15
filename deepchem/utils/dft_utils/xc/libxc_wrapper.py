@@ -813,6 +813,13 @@ def _get_libxc_res(inp: Mapping[str, Union[np.ndarray, Tuple[np.ndarray, ...],
     """
     do_exc, do_vxc, do_fxc, do_kxc, do_lxc = _get_dos(deriv)
 
+    # pylibxc expects numpy arrays; recent libxc versions no longer convert
+    # torch tensors internally, so convert them here before calling compute
+    inp = {
+        k: v.detach().cpu().numpy() if isinstance(v, torch.Tensor) else v
+        for k, v in inp.items()
+    }
+
     res = libxcfcn.compute(inp,
                            do_exc=do_exc,
                            do_vxc=do_vxc,
