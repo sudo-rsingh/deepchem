@@ -1,10 +1,13 @@
 import pytest
 import warnings
+try:
+    import torch
+except Exception as e:
+    warnings.warn("Could not import torch. Skipping tests." + str(e))
 
 
 @pytest.mark.dqc
 def test_pbe():
-    import torch
     from deepchem.models.dft.nnxc import HybridXC
     from deepchem.models.dft.dftxc import _construct_nn_model
     from deepchem.models.dft.scf import XCNNSCF
