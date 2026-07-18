@@ -78,6 +78,8 @@ from deepchem.feat.atomic_conformation import AtomicConformationFeaturizer
 
 from deepchem.feat.huggingface_featurizer import HuggingFaceFeaturizer
 
+from deepchem.feat.protein_backbone_featurizer import ProteinBackboneFeaturizer
+
 # biological sequence featurizers
 try:
     from deepchem.feat.bio_seq_featurizer import SAMFeaturizer
@@ -92,12 +94,16 @@ except ImportError as e:
 from deepchem.feat.deepvariant_featurizer import RealignerFeaturizer
 from deepchem.feat.deepvariant_pileup_featurizer import PileupFeaturizer
 
+#ProteinMPNN featurizer
+from deepchem.feat.ProteinMPNN_featurizer import ProteinMPNNFeaturizer
+
 # tokenizers
 try:
     from deepchem.feat.smiles_tokenizer import SmilesTokenizer
     from deepchem.feat.smiles_tokenizer import BasicSmilesTokenizer
     from deepchem.feat.bert_tokenizer import BertFeaturizer
     from deepchem.feat.roberta_tokenizer import RobertaFeaturizer
+    from deepchem.feat.dnabert_tokenizer import DNABertFeaturizer
     from deepchem.feat.reaction_featurizer import RxnFeaturizer
 except ModuleNotFoundError:
     pass

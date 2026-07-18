@@ -95,6 +95,13 @@ DMPNNFeaturizer
   :members:
   :inherited-members:
 
+ProteinMPNNFeaturizer
+*********************
+
+.. autoclass:: deepchem.feat.ProteinMPNNFeaturizer
+  :members:
+  :inherited-members:
+
 GroverFeaturizer
 ****************
 
@@ -369,7 +376,7 @@ SAMFeaturizer
 
 .. autoclass:: deepchem.feat.SAMFeaturizer
   :members:
-  :inherited-members: 
+  :inherited-members:
 
 BAMFeaturizer
 ^^^^^^^^^^^^^
@@ -567,6 +574,17 @@ BindingPocketFeaturizer
   :members:
   :inherited-members:
 
+ProteinBackboneFeaturizer
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This featurizer reads only the first model from a multi-model PDB,
+skips standard residues missing any of N, CA, or C, and center-crops
+overlength proteins with a warning when ``max_length`` is set.
+
+.. autoclass:: deepchem.feat.ProteinBackboneFeaturizer
+  :members:
+  :inherited-members:
+
 UserDefinedFeaturizer
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -578,6 +596,13 @@ DummyFeaturizer
 ^^^^^^^^^^^^^^^
 
 .. autoclass:: deepchem.feat.DummyFeaturizer
+  :members:
+  :inherited-members:
+
+DNABertFeaturizer
+^^^^^^^^^^^^^^^^^
+
+.. autoclass:: deepchem.feat.dnabert_tokenizer.DNABertFeaturizer
   :members:
   :inherited-members:
 
