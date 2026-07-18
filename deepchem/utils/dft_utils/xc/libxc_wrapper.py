@@ -1005,7 +1005,19 @@ def _extract_returns(ret: Mapping[str, np.ndarray], deriv: int, family: int) -> 
         keys = MGGA_KEYS
     else:
         raise RuntimeError("Unknown libxc family %d" % family)
-    return tuple(a(ret[key]) for key in keys[deriv])
+
+    selected = keys[deriv]
+    # Recent libxc omits the output keys a functional does not depend on
+    # (e.g. 'vlapl' for a non-laplacian MGGA such as mgga_x_scan) instead of
+    # returning zeros. Those derivatives are identically zero, so fill them
+    # with a zero array shaped like the density-only derivative of the same
+    # order (the first key, always returned), which carries the spin
+    # multiplicity of the omitted laplacian terms.
+    missing = [key for key in selected if key not in ret]
+    if missing:
+        zero = np.zeros_like(ret[selected[0]])
+        ret = {**ret, **{key: zero for key in missing}}
+    return tuple(a(ret[key]) for key in selected)
 
 
 def _get_grad_inps(
