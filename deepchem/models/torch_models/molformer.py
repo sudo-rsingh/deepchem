@@ -131,6 +131,7 @@ class MoLFormer(HuggingFaceModel):
                                         task=task,
                                         tokenizer=tokenizer,
                                         config=molformer_config.to_dict(),
+                                        code_revision=MOLFORMER_HF_REVISION,
                                         **kwargs)
 
     def _prepare_batch(self, batch):
