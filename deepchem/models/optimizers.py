@@ -351,8 +351,6 @@ class AdamW(Optimizer):
         else:
             learning_rate = self.learning_rate
         if hasattr(tf.keras.optimizers, 'AdamW'):
-            # Native AdamW (TF>=2.11 for most builds; not present in every
-            # pre-2.16 release, hence the tensorflow_addons fallback below).
             return tf.keras.optimizers.AdamW(weight_decay=self.weight_decay,
                                              learning_rate=learning_rate,
                                              beta_1=self.beta1,

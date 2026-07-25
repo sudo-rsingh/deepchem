@@ -9,9 +9,6 @@ from deepchem.utils import ConvergenceWarning, get_np_dtype
 from scipy.sparse.linalg import gmres as scipy_gmres
 from deepchem.utils.differentiation_utils.optimize.rootsolver import broyden1
 
-# scipy renamed gmres's tolerance kwarg from `tol` to `rtol` in 1.14 and later
-# removed `tol` entirely; older scipy (e.g. the last version supporting
-# Python 3.8) only has `tol`. Detect which is available at runtime.
 _GMRES_TOL_KWARG = 'rtol' if 'rtol' in inspect.signature(
     scipy_gmres).parameters else 'tol'
 
